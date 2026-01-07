@@ -8,10 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "predeploy": "vite build && npm run create:cname",
-    "create:cname": "echo '3d-druck.zinit.ch' > ./dist/CNAME",
-    "postbuild:copy:cname": "node ./scripts/copy-cname.cjs",
-    "deploy": "npm run build && gh-pages -d dist"
+    "predeploy": "vite build",
+    "create:cname": "echo 3d-druck.zinit.ch > ./dist/CNAME",
+    "deploy": "npm run build && npm run create:cname && gh-pages -d dist"
   },
   "dependencies": {
     "react": "^19.2.3",

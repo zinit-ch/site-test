@@ -58,7 +58,7 @@ export const TRANSLATIONS = {
     nozzleSize: 'Druckdüse (mm)',
     warning: 'Dies ist eine Schätzung und es können Fehler auftreten. Für einen genauen Preis kontaktiere mich bitte unter 3d-druck@zinit.ch.',
     engineReady: 'STLLoader Engine bereit',
-    placeholderTitle: 'Laden Sie ein STL-Modell hoch',
+    placeholderTitle: 'Lade ein STL-Modell hoch',
     placeholderSub: 'Die interaktive 3D-Vorschau erscheint hier',
     costDistribution: 'Kostenverteilungsanalyse',
     rights: 'Alle Rechte vorbehalten.',
@@ -67,7 +67,7 @@ export const TRANSLATIONS = {
     sendInquiry: 'Anfrage per E-Mail senden',
     emailSubject: '3D-Druck Anfrage',
     emailBodyHeader: 'Hallo zinit.ch Team,\n\nIch möchte einen Druck mit den folgenden Einstellungen anfragen:',
-    emailBodyFooter: '\n(Bitte denken Sie daran, die STL-Datei dieser E-Mail anzuhängen.)',
+    emailBodyFooter: '\n(Bitte denke daran, die STL-Datei dieser E-Mail anzuhängen.)',
     quantity: 'Stückzahl'
   },
   fr: {
