@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { MaterialType, ModelStats, PrintConfig, PriceBreakdown } from './types';
 import { MATERIALS, COLORS, NOZZLE_FACTORS, BASE_SETUP_FEE, HOURLY_MACHINE_RATE, LABOR_RATE } from './constants';
-import { calculateModelStats, formatNumber } from './utils/stlUtils';
+import { calculateModelStats, formatNumber, roundToNearest005 } from './utils/stlUtils';
 import Viewer3D from './components/Viewer3D';
 import PriceBreakdownChart from './components/PriceBreakdownChart';
 import { Upload, Settings, DollarSign, Box, AlertCircle, Palette, Layers, Clock, Send } from 'lucide-react';
@@ -24,7 +24,8 @@ const App: React.FC = () => {
     quantity: 1,
     color: COLORS[1].hex, // Default Black
     isMulticolor: false,
-    nozzleSize: 0.4
+    nozzleSize: 0.4,
+    colorsCount: 2
   });
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +52,7 @@ const App: React.FC = () => {
     
     const usedVolumeCm3 = (stats.volume / 1000) * infillFactor;
     const weightG = usedVolumeCm3 * material.density;
-    const materialCost = (weightG / 1000) * material.costPerKg * config.quantity;
+    const materialCostRaw = (weightG / 1000) * material.costPerKg * config.quantity;
 
     // Time calculations affected by nozzle and layer height
     const baseTimeHours = stats.volume / 10000; 
@@ -62,11 +63,18 @@ const App: React.FC = () => {
     const printTimeHours = baseTimeHours * layerFactor * infillFactor * nozzleFactor * multicolorFactor;
     
     // Labor cost: basic prep + multicolor complexity
-    const multicolorLaborFlat = config.isMulticolor ? 5.0 : 0.0;
-    const laborCost = (0.2 * LABOR_RATE * config.quantity) + multicolorLaborFlat;
-    
-    const machineCost = printTimeHours * HOURLY_MACHINE_RATE * config.quantity;
-    const total = BASE_SETUP_FEE + materialCost + laborCost + machineCost;
+    const multicolorLaborFlat = config.isMulticolor ? (2.5 * (config.colorsCount || 2)) : 0.0;
+    const laborCostRaw = (0.2 * LABOR_RATE * config.quantity) + multicolorLaborFlat;
+
+    const machineCostRaw = printTimeHours * HOURLY_MACHINE_RATE * config.quantity;
+
+    // Round individual components to nearest 0.05 CHF
+    const materialCost = roundToNearest005(materialCostRaw);
+    const laborCost = roundToNearest005(laborCostRaw);
+    const machineCost = roundToNearest005(machineCostRaw);
+
+    const setupFee = roundToNearest005(BASE_SETUP_FEE);
+    const total = roundToNearest005(setupFee + materialCost + laborCost + machineCost);
 
     return { materialCost, laborCost, machineCost, printTime: printTimeHours, total };
   }, [stats, config]);
@@ -77,7 +85,7 @@ const App: React.FC = () => {
     const email = '3d-druck@zinit.ch';
     const subject = encodeURIComponent(`${t.emailSubject}: ${file.name}`);
     
-    const colorName = COLORS.find(c => c.hex === config.color)?.name || config.color;
+    const colorName = config.isMulticolor ? `${config.colorsCount} colors` : (COLORS.find(c => c.hex === config.color)?.name || config.color);
     
     const body = encodeURIComponent(
       `${t.emailBodyHeader}\n\n` +
@@ -139,10 +147,10 @@ const App: React.FC = () => {
             ))}
           </div>
 
-           <label className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 transition-colors px-6 py-3 rounded-xl cursor-pointer font-semibold shadow-lg shadow-indigo-500/20">
+            <label className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 transition-colors px-6 py-3 rounded-xl cursor-pointer font-semibold shadow-lg shadow-indigo-500/20">
             <Upload size={20} />
             <span>{t.upload}</span>
-            <input type="file" accept=".stl" className="hidden" onChange={handleFileUpload} />
+            <input type="file" accept=".stl,.3mf,.step,.stp" className="hidden" onChange={handleFileUpload} />
           </label>
         </div>
       </header>
@@ -211,7 +219,7 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex justify-between pt-2 border-t border-white/5 font-bold">
                   <span>{t.setupFee}</span>
-                  <span className="font-mono">{t.currency} {formatNumber(BASE_SETUP_FEE)}</span>
+                  <span className="font-mono">{t.currency} {formatNumber(roundToNearest005(BASE_SETUP_FEE))}</span>
                 </div>
               </div>
 
@@ -284,17 +292,31 @@ const App: React.FC = () => {
                 <label className="text-xs font-medium text-neutral-500 uppercase flex items-center gap-2">
                   <Palette size={14} /> {t.color}
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {COLORS.map((c) => (
-                    <button
-                      key={c.hex}
-                      onClick={() => setConfig({ ...config, color: c.hex })}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${config.color === c.hex ? 'border-indigo-500 scale-110 shadow-lg' : 'border-transparent opacity-60 hover:opacity-100'}`}
-                      style={{ backgroundColor: c.hex }}
-                      title={c.name}
-                    />
-                  ))}
-                </div>
+                {!config.isMulticolor ? (
+                  <div className="flex flex-wrap gap-2">
+                    {COLORS.map((c) => (
+                      <button
+                        key={c.hex}
+                        onClick={() => setConfig({ ...config, color: c.hex })}
+                        className={`w-8 h-8 rounded-full border-2 transition-all ${config.color === c.hex ? 'border-indigo-500 scale-110 shadow-lg' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                        style={{ backgroundColor: c.hex }}
+                        title={c.name}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-6 gap-2">
+                    {[2,3,4,5,6,7].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setConfig({ ...config, colorsCount: n })}
+                        className={`py-2 rounded-lg border text-sm transition-all ${config.colorsCount === n ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' : 'bg-black/40 border-white/10 text-neutral-500 hover:border-white/20'}`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">

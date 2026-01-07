@@ -33,6 +33,7 @@ export interface PrintConfig {
   color: string;
   isMulticolor: boolean;
   nozzleSize: 0.2 | 0.4 | 0.6;
+  colorsCount?: number; // number of colors when multicolor printing is enabled (2-7)
 }
 
 export interface PriceBreakdown {

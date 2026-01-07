@@ -3,7 +3,7 @@ import React, { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stage, Center, Grid, Environment } from '@react-three/drei';
 import * as THREE from 'three';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader';
+// Loaders are dynamically imported to keep the initial bundle small
 
 interface Viewer3DProps {
   file: File | null;
@@ -15,64 +15,86 @@ interface Viewer3DProps {
 }
 
 const Model = ({ file }: { file: File }) => {
-  const geometry = useMemo(() => {
-    const loader = new STLLoader();
+  const ext = (file.name || '').toLowerCase();
+
+  const result = useMemo(() => {
     const url = URL.createObjectURL(file);
-    return new Promise<THREE.BufferGeometry>((resolve) => {
-      loader.load(url, (geo) => {
-        geo.computeVertexNormals();
-        resolve(geo);
-      });
+    let cancelled = false;
+
+    const loadSTL = () => new Promise<{ type: 'geometry'; geometry: THREE.BufferGeometry }>((resolve, reject) => {
+      import('three/examples/jsm/loaders/STLLoader').then((mod) => {
+        const loader = new mod.STLLoader();
+        loader.load(url, (geo: THREE.BufferGeometry) => {
+          geo.computeVertexNormals();
+          if (!cancelled) resolve({ type: 'geometry', geometry: geo });
+        }, undefined, reject);
+      }).catch(reject);
     });
+
+    const load3MF = () => new Promise<{ type: 'object'; object: THREE.Object3D }>((resolve, reject) => {
+      import('three/examples/jsm/loaders/3MFLoader').then((mod) => {
+        const loader = new mod.ThreeMFLoader();
+        loader.load(url, (object: THREE.Object3D) => {
+          if (!cancelled) resolve({ type: 'object', object });
+        }, undefined, reject);
+      }).catch(reject);
+    });
+
+    const promise = ext.endsWith('.stl') ? loadSTL() : (ext.endsWith('.3mf') ? load3MF() : Promise.reject(new Error('Unsupported preview')));
+
+    return {
+      promise,
+      url,
+      cancel: () => { cancelled = true; }
+    };
   }, [file]);
 
-  const [resolvedGeometry, setResolvedGeometry] = React.useState<THREE.BufferGeometry | null>(null);
+  const [geoObj, setGeoObj] = React.useState<any>(null);
 
   React.useEffect(() => {
-    let cancelled = false;
-    let objectUrl: string | null = null;
-
-    // geometry promise created inside useMemo uses URL.createObjectURL(file)
-    // We can't directly access that URL here, but we can ensure cleanup
-    // by revoking any object URLs created from the file when component unmounts.
-    // Create a dedicated object URL here for revocation purposes.
-    try {
-      objectUrl = URL.createObjectURL(file);
-    } catch (e) {
-      objectUrl = null;
-    }
-
-    geometry.then((g) => {
-      if (!cancelled) setResolvedGeometry(g);
+    let mounted = true;
+    result.promise.then((res: any) => {
+      if (!mounted) return;
+      setGeoObj(res);
+    }).catch(() => {
+      setGeoObj(null);
     });
 
     return () => {
-      cancelled = true;
-      if (objectUrl) {
-        try { URL.revokeObjectURL(objectUrl); } catch (e) { /* ignore */ }
-      }
-      if (resolvedGeometry) {
-        try {
-          resolvedGeometry.dispose?.();
-        } catch (e) {
-          // ignore disposal errors
-        }
+      mounted = false;
+      try { URL.revokeObjectURL(result.url); } catch (e) {}
+      result.cancel();
+      if (geoObj && geoObj.type === 'geometry') {
+        try { geoObj.geometry.dispose?.(); } catch (e) {}
       }
     };
-  }, [geometry]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
 
-  if (!resolvedGeometry) return null;
+  if (!geoObj) return (
+    <Center>
+      <mesh>
+        <meshStandardMaterial color="#374151" />
+      </mesh>
+    </Center>
+  );
 
-  // Use local component aliases to bypass JSX intrinsic checks if global types are missing
-  const Mesh = 'mesh' as any;
-  const MeshStandardMaterial = 'meshStandardMaterial' as any;
+  if (geoObj.type === 'geometry') {
+    const MeshComp = 'mesh' as any;
+    const MeshMat = 'meshStandardMaterial' as any;
+    return (
+      <Center>
+        <MeshComp geometry={geoObj.geometry} castShadow receiveShadow>
+          <MeshMat color="#4f46e5" roughness={0.3} metalness={0.2} />
+        </MeshComp>
+      </Center>
+    );
+  }
 
+  // object (3MF)
   return (
     <Center>
-      {/* Using capitalized aliases avoids JSX intrinsic element type checking */}
-      <Mesh geometry={resolvedGeometry} castShadow receiveShadow>
-        <MeshStandardMaterial color="#4f46e5" roughness={0.3} metalness={0.2} />
-      </Mesh>
+      <primitive object={geoObj.object} />
     </Center>
   );
 };
