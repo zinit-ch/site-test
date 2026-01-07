@@ -1,0 +1,5 @@
+{
+  "name": "zinit.ch 3D-Druck Service",
+  "description": "Professional 3D model cost estimator and printing service. Upload STL files to get instant volume calculations and pricing breakdowns.",
+  "requestFramePermissions": []
+}
