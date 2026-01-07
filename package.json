@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "predeploy": "vite build",
-    "deploy": "gh-pages -d dist"
+    "postbuild:copy:cname": "node ./scripts/copy-cname.cjs",
+    "deploy": "npm run build && gh-pages -d dist --cname 3d-druck.zinit.ch"
   },
   "dependencies": {
     "react": "^19.2.3",

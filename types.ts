@@ -23,6 +23,7 @@ export interface MaterialInfo {
   density: number; // g/cm^3
   costPerKg: number; // USD
   description: string;
+  enabled?: boolean; // allow toggling materials on/off from constants
 }
 
 export interface PrintConfig {

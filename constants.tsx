@@ -1,38 +1,56 @@
 
 import { MaterialType, MaterialInfo } from './types';
 
+// Toggle: show/hide the multicolor-print option in the UI
+export const ENABLE_MULTICOLOR = true;
+
+// Materials list with simple enabled flag for easy toggling
 export const MATERIALS: Record<MaterialType, MaterialInfo> = {
   [MaterialType.PLA]: {
     name: MaterialType.PLA,
     density: 1.24,
     costPerKg: 25.0,
-    description: 'Easy to print, biodegradable, great for prototypes.'
+    description: 'Easy to print, biodegradable, great for prototypes.',
+    enabled: true
   },
   [MaterialType.PETG]: {
     name: MaterialType.PETG,
     density: 1.27,
     costPerKg: 30.0,
-    description: 'Durable, chemical resistant, good balance of strength.'
+    description: 'Durable, chemical resistant, good balance of strength.',
+    enabled: true
   },
   [MaterialType.ABS]: {
     name: MaterialType.ABS,
     density: 1.04,
     costPerKg: 28.0,
-    description: 'High strength, heat resistant, industrial standard.'
+    description: 'High strength, heat resistant, industrial standard.',
+    enabled: true
   },
   [MaterialType.TPU]: {
     name: MaterialType.TPU,
     density: 1.21,
     costPerKg: 45.0,
-    description: 'Flexible, rubber-like, high impact resistance.'
+    description: 'Flexible, rubber-like, high impact resistance.',
+    enabled: true
   },
   [MaterialType.NYLON]: {
     name: MaterialType.NYLON,
     density: 1.1,
     costPerKg: 60.0,
-    description: 'Extremely tough, wear resistant, self-lubricating.'
+    description: 'Extremely tough, wear resistant, self-lubricating.',
+    enabled: false // disabled by default as an example
   }
 };
+
+// Printer profiles: adjust these to optimize pricing/time calculations per printer
+export const PRINTER_PROFILES: Record<string, { hourlyRate: number; speedFactor: number; multicolorFactor: number }> = {
+  Default: { hourlyRate: 2.0, speedFactor: 1.0, multicolorFactor: 1.5 },
+  'BambuLab H2C': { hourlyRate: 4.0, speedFactor: 0.6, multicolorFactor: 1.2 }
+};
+
+// Choose which profile should be used by default. Change to 'Default' or 'BambuLab H2C'.
+export const DEFAULT_PRINTER = 'BambuLab H2C';
 
 export const COLORS = [
   { name: 'White', hex: '#FFFFFF' },

@@ -1,10 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { MaterialType, ModelStats, PrintConfig, PriceBreakdown } from './types';
-import { MATERIALS, COLORS, NOZZLE_FACTORS, BASE_SETUP_FEE, HOURLY_MACHINE_RATE, LABOR_RATE } from './constants';
+import { MATERIALS, COLORS, NOZZLE_FACTORS, BASE_SETUP_FEE, LABOR_RATE, ENABLE_MULTICOLOR, PRINTER_PROFILES, DEFAULT_PRINTER } from './constants';
 import { calculateModelStats, formatNumber, roundToNearest005 } from './utils/stlUtils';
 import Viewer3D from './components/Viewer3D';
-import PriceBreakdownChart from './components/PriceBreakdownChart';
 import { Upload, Settings, DollarSign, Box, AlertCircle, Palette, Layers, Clock, Send } from 'lucide-react';
 import { Language, TRANSLATIONS, MATERIAL_DESCRIPTIONS } from './translations';
 
@@ -27,6 +26,17 @@ const App: React.FC = () => {
     nozzleSize: 0.4,
     colorsCount: 2
   });
+
+  // ensure selected material is enabled; if not, pick first enabled material
+  useEffect(() => {
+    const enabledMaterials = Object.values(MATERIALS).filter(m => m.enabled !== false).map(m => m.name);
+    if (enabledMaterials.length && !enabledMaterials.includes(config.material)) {
+      setConfig({ ...config, material: enabledMaterials[0] as MaterialType });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const showMulticolor = ENABLE_MULTICOLOR && config.isMulticolor;
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = event.target.files?.[0];
@@ -53,20 +63,20 @@ const App: React.FC = () => {
     const usedVolumeCm3 = (stats.volume / 1000) * infillFactor;
     const weightG = usedVolumeCm3 * material.density;
     const materialCostRaw = (weightG / 1000) * material.costPerKg * config.quantity;
-
-    // Time calculations affected by nozzle and layer height
-    const baseTimeHours = stats.volume / 10000; 
+    // Time calculations affected by nozzle, layer height, and printer profile
+    const profile = PRINTER_PROFILES[DEFAULT_PRINTER] || PRINTER_PROFILES.Default;
+    const baseTimeHours = (stats.volume / 10000) * profile.speedFactor; 
     const layerFactor = 0.2 / config.layerHeight; 
     const nozzleFactor = NOZZLE_FACTORS[config.nozzleSize];
-    const multicolorFactor = config.isMulticolor ? 1.5 : 1.0;
-    
+    const multicolorFactor = config.isMulticolor ? profile.multicolorFactor : 1.0;
+
     const printTimeHours = baseTimeHours * layerFactor * infillFactor * nozzleFactor * multicolorFactor;
-    
-    // Labor cost: basic prep + multicolor complexity
-    const multicolorLaborFlat = config.isMulticolor ? (2.5 * (config.colorsCount || 2)) : 0.0;
+
+    // Labor cost: basic prep + multicolor complexity (adjusted by printer profile if needed)
+    const multicolorLaborFlat = config.isMulticolor ? (2.5 * (config.colorsCount || 2) * (profile.multicolorFactor / 1.5)) : 0.0;
     const laborCostRaw = (0.2 * LABOR_RATE * config.quantity) + multicolorLaborFlat;
 
-    const machineCostRaw = printTimeHours * HOURLY_MACHINE_RATE * config.quantity;
+    const machineCostRaw = printTimeHours * profile.hourlyRate * config.quantity;
 
     // Round individual components to nearest 0.05 CHF
     const materialCost = roundToNearest005(materialCostRaw);
@@ -177,19 +187,7 @@ const App: React.FC = () => {
             )}
           </div>
 
-          {stats && (
-            <div className="bg-neutral-900/50 border border-white/10 rounded-2xl p-6 shadow-xl">
-              <h4 className="font-semibold text-sm uppercase tracking-wider text-neutral-400 mb-4 text-center">{t.costDistribution}</h4>
-              <PriceBreakdownChart 
-                breakdown={breakdown} 
-                labels={{
-                  material: t.material,
-                  labor: t.laborPost,
-                  machine: t.machineTime
-                }}
-              />
-            </div>
-          )}
+          {/** Cost Distribution Analysis removed as requested **/}
         </div>
 
         <div className="lg:col-span-4 space-y-6">
@@ -279,8 +277,8 @@ const App: React.FC = () => {
                   value={config.material}
                   onChange={(e) => setConfig({ ...config, material: e.target.value as MaterialType })}
                 >
-                  {Object.values(MaterialType).map(m => (
-                    <option key={m} value={m} className="bg-neutral-900">{m}</option>
+                  {Object.values(MATERIALS).filter(m => m.enabled !== false).map(m => (
+                    <option key={m.name} value={m.name} className="bg-neutral-900">{m.name}</option>
                   ))}
                 </select>
                 <p className="text-[10px] text-neutral-600 px-1">
@@ -292,7 +290,7 @@ const App: React.FC = () => {
                 <label className="text-xs font-medium text-neutral-500 uppercase flex items-center gap-2">
                   <Palette size={14} /> {t.color}
                 </label>
-                {!config.isMulticolor ? (
+                {!showMulticolor ? (
                   <div className="flex flex-wrap gap-2">
                     {COLORS.map((c) => (
                       <button
@@ -319,20 +317,22 @@ const App: React.FC = () => {
                 )}
               </div>
 
-              <div className="space-y-3">
-                <label className="flex items-center justify-between cursor-pointer group">
-                  <div className="flex items-center gap-2">
-                    <Layers size={16} className="text-neutral-500" />
-                    <span className="text-sm text-neutral-300">{t.multicolor}</span>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={config.isMulticolor}
-                    onChange={(e) => setConfig({ ...config, isMulticolor: e.target.checked })}
-                    className="w-10 h-5 bg-neutral-800 rounded-full appearance-none relative checked:bg-indigo-500 transition-all cursor-pointer before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-5 before:transition-transform"
-                  />
-                </label>
-              </div>
+              {ENABLE_MULTICOLOR && (
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between cursor-pointer group">
+                    <div className="flex items-center gap-2">
+                      <Layers size={16} className="text-neutral-500" />
+                      <span className="text-sm text-neutral-300">{t.multicolor}</span>
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      checked={config.isMulticolor}
+                      onChange={(e) => setConfig({ ...config, isMulticolor: e.target.checked })}
+                      className="w-10 h-5 bg-neutral-800 rounded-full appearance-none relative checked:bg-indigo-500 transition-all cursor-pointer before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-5 before:transition-transform"
+                    />
+                  </label>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-neutral-500 uppercase">{t.nozzleSize}</label>
