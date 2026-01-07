@@ -71,7 +71,7 @@ export const TRANSLATIONS = {
     quantity: 'Stückzahl'
   },
   fr: {
-    title: 'zinit.ch Service d\'impression 3D',
+    title: 'zinit.ch 3D-Druck Service',
     upload: 'Télécharger STL',
     analyzing: 'Analyse de la géométrie...',
     estTotalCost: 'Coût total estimé',
@@ -105,7 +105,7 @@ export const TRANSLATIONS = {
     quantity: 'Quantité'
   },
   it: {
-    title: 'zinit.ch Servizio di stampa 3D',
+    title: 'zinit.ch 3D-Druck Service',
     upload: 'Carica STL',
     analyzing: 'Analisi della geometria...',
     estTotalCost: 'Costo totale stimato',
