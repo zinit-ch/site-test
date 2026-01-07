@@ -29,7 +29,36 @@ const Model = ({ file }: { file: File }) => {
   const [resolvedGeometry, setResolvedGeometry] = React.useState<THREE.BufferGeometry | null>(null);
 
   React.useEffect(() => {
-    geometry.then(setResolvedGeometry);
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    // geometry promise created inside useMemo uses URL.createObjectURL(file)
+    // We can't directly access that URL here, but we can ensure cleanup
+    // by revoking any object URLs created from the file when component unmounts.
+    // Create a dedicated object URL here for revocation purposes.
+    try {
+      objectUrl = URL.createObjectURL(file);
+    } catch (e) {
+      objectUrl = null;
+    }
+
+    geometry.then((g) => {
+      if (!cancelled) setResolvedGeometry(g);
+    });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) {
+        try { URL.revokeObjectURL(objectUrl); } catch (e) { /* ignore */ }
+      }
+      if (resolvedGeometry) {
+        try {
+          resolvedGeometry.dispose?.();
+        } catch (e) {
+          // ignore disposal errors
+        }
+      }
+    };
   }, [geometry]);
 
   if (!resolvedGeometry) return null;

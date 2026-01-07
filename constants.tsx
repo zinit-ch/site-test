@@ -45,7 +45,7 @@ export const COLORS = [
   { name: 'Purple', hex: '#8B5CF6' }
 ];
 
-export const NOZZLE_FACTORS = {
+export const NOZZLE_FACTORS: Record<number, number> = {
   0.2: 2.0, // High detail, slow
   0.4: 1.0, // Standard
   0.6: 0.6  // Draft, fast

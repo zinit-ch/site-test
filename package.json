@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://zinit-ch.github.io/site-test/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

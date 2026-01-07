@@ -15,7 +15,7 @@ export enum MaterialType {
   PETG = 'PETG',
   ABS = 'ABS',
   TPU = 'TPU',
-  NYLON = 'Nylon'
+  NYLON = 'NYLON'
 }
 
 export interface MaterialInfo {
