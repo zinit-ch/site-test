@@ -22,5 +22,5 @@ Notes:
 - To preview changes before publishing to gh-pages run: 
 
 ```bash
-npm run preview
+npm run dev
 ```
