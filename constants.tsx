@@ -86,11 +86,17 @@ export const DEFAULT_PRINTER = 'BambuLab H2C';
 
 // colors are now embedded on each material in the MATERIALS map
 
-export const NOZZLE_FACTORS: Record<number, number> = {
-  0.2: 2.0, // High detail, slow
-  0.4: 1.0, // Standard
-  0.6: 0.6  // Draft, fast
+// Configurable nozzles: enable/disable sizes and provide the speed factor
+export const NOZZLES: Record<number, { enabled: boolean; factor: number; label?: string }> = {
+  0.2: { enabled: true, factor: 2.0, label: '0.2' }, // High detail, slow
+  0.4: { enabled: true, factor: 1.0, label: '0.4' }, // Standard
+  0.6: { enabled: true, factor: 0.6, label: '0.6' }  // Draft, fast
 };
+
+// Backwards-compatible map used in calculations elsewhere in the app
+export const NOZZLE_FACTORS: Record<number, number> = Object.fromEntries(
+  Object.entries(NOZZLES).map(([k, v]) => [parseFloat(k), v.factor])
+) as Record<number, number>;
 
 export const BASE_SETUP_FEE = 5.0;
 export const HOURLY_MACHINE_RATE = 2.0;

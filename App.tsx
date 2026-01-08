@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { MaterialType, ModelStats, PrintConfig, PriceBreakdown } from './types';
-import { MATERIALS, NOZZLE_FACTORS, BASE_SETUP_FEE, LABOR_RATE, ENABLE_MULTICOLOR, PRINTER_PROFILES, DEFAULT_PRINTER } from './constants';
+import { MATERIALS, NOZZLE_FACTORS, NOZZLES, BASE_SETUP_FEE, LABOR_RATE, ENABLE_MULTICOLOR, PRINTER_PROFILES, DEFAULT_PRINTER } from './constants';
 import { calculateModelStats, formatNumber, roundToNearest005 } from './utils/stlUtils';
 import Viewer3D from './components/Viewer3D';
 import { Upload, Settings, DollarSign, Box, AlertCircle, Palette, Layers, Clock, Send } from 'lucide-react';
@@ -121,6 +121,10 @@ const App: React.FC = () => {
 
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   };
+
+  const selectedColorDisplay = config.isMulticolor
+    ? t.multicolor
+    : (MATERIALS[config.material].colors?.find(c => c.hex === config.color)?.name || config.color);
 
   const renderWarningText = (text: string) => {
     const email = '3d-druck@zinit.ch';
@@ -299,6 +303,12 @@ const App: React.FC = () => {
                 <label className="text-xs font-medium text-neutral-500 uppercase flex items-center gap-2">
                   <Palette size={14} /> {t.color}
                 </label>
+                <div className="mt-2 flex items-center gap-2 text-sm text-neutral-300">
+                  {!config.isMulticolor && (
+                    <span className="w-4 h-4 rounded-sm border" style={{ backgroundColor: config.color }} />
+                  )}
+                  <span className="font-medium">{selectedColorDisplay}</span>
+                </div>
                 {!showMulticolor ? (
                   <div className="flex flex-wrap gap-2">
                     {(MATERIALS[config.material].colors || []).map((c) => (
@@ -346,15 +356,18 @@ const App: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-xs font-medium text-neutral-500 uppercase">{t.nozzleSize}</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {[0.2, 0.4, 0.6].map(val => (
-                    <button
-                      key={val}
-                      onClick={() => setConfig({ ...config, nozzleSize: val as 0.2 | 0.4 | 0.6 })}
-                      className={`py-2 rounded-lg border text-sm transition-all ${config.nozzleSize === val ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' : 'bg-black/40 border-white/10 text-neutral-500 hover:border-white/20'}`}
-                    >
-                      {val}
-                    </button>
-                  ))}
+                  {Object.keys(NOZZLES)
+                    .map(k => parseFloat(k))
+                    .filter(n => NOZZLES[n].enabled)
+                    .map(val => (
+                      <button
+                        key={val}
+                        onClick={() => setConfig({ ...config, nozzleSize: val as 0.2 | 0.4 | 0.6 })}
+                        className={`py-2 rounded-lg border text-sm transition-all ${config.nozzleSize === val ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' : 'bg-black/40 border-white/10 text-neutral-500 hover:border-white/20'}`}
+                      >
+                        {NOZZLES[val].label || val}
+                      </button>
+                    ))}
                 </div>
               </div>
 
