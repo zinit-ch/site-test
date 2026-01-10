@@ -14,7 +14,7 @@ export enum MaterialType {
   PLA = 'PLA',
   PETG = 'PETG',
   ABS = 'ABS',
-  TPU = 'TPU',
+  TPU = 'TPU-95A',
   NYLON = 'NYLON'
 }
 
