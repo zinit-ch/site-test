@@ -74,12 +74,21 @@ const App: React.FC = () => {
     const materialCostRaw = (weightG / 1000) * material.costPerKg * config.quantity;
     // Time calculations affected by nozzle, layer height, and printer profile
     const profile = PRINTER_PROFILES[DEFAULT_PRINTER] || PRINTER_PROFILES.Default;
-    const baseTimeHours = (stats.volume / 10000) * profile.speedFactor; 
+
     const layerFactor = 0.2 / config.layerHeight; 
     const nozzleFactor = NOZZLE_FACTORS[config.nozzleSize];
     const multicolorFactor = config.isMulticolor ? profile.multicolorFactor : 1.0;
 
-    const printTimeHours = baseTimeHours * layerFactor * infillFactor * nozzleFactor * multicolorFactor;
+    const volumeCm3 = stats.volume / 1000; // convert mm^3 -> cm^3
+    // Calibrated per-cm³ constants so that for 30 cm³ we get:
+    // - 1.5 hours at 5% infill
+    // - 3.25 hours at 100% infill
+    const basePerCm3 = 0.04693; // hours per cm³ for infill-independent work (perimeters, travel, etc.)
+    const infillPerCm3 = 0.0614035; // hours per cm³ at 100% infill
+
+    // Do not multiply by a separate profile speed factor here so the calibrated
+    // per-cm³ constants directly produce the requested durations.
+    const printTimeHours = volumeCm3 * (basePerCm3 + infillPerCm3 * infillFactor) * layerFactor * nozzleFactor * multicolorFactor;
 
     // Labor cost: basic prep + multicolor complexity (adjusted by printer profile if needed)
     const multicolorLaborFlat = config.isMulticolor ? (2.5 * (config.colorsCount || 2) * (profile.multicolorFactor / 1.5)) : 0.0;
@@ -88,7 +97,7 @@ const App: React.FC = () => {
     const machineCostRaw = printTimeHours * profile.hourlyRate * config.quantity;
 
     // Round individual components to nearest 0.05 CHF
-    const materialCost = roundToNearest005(materialCostRaw);
+    const materialCost = Math.max(roundToNearest005(materialCostRaw), 0.1);
     const laborCost = roundToNearest005(laborCostRaw);
     const machineCost = roundToNearest005(machineCostRaw);
 
