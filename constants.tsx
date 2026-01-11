@@ -65,15 +65,51 @@ export const MATERIALS: Record<MaterialType, MaterialInfo> = {
   }
 };
 
+// Energy cost per kWh in CHF (Swiss electricity rate)
+export const ENERGY_COST_PER_KWH = 0.4;
+
 // Printer profiles: adjust these to optimize pricing/time calculations per printer
-export const PRINTER_PROFILES: Record<string, { hourlyRate: number; speedFactor: number; multicolorFactor: number; printVolume: { x: number; y: number; z: number } }> = {
-  Default: { hourlyRate: 2.0, speedFactor: 1.0, multicolorFactor: 1.5, printVolume: { x: 200, y: 200, z: 200 } },
-  'BambuLab H2C': { hourlyRate: 5.0, speedFactor: 1.0, multicolorFactor: 2.0, printVolume: { x: 256, y: 256, z: 256 } },
-  'Ender 3 V2': { hourlyRate: 2.0, speedFactor: 3.8, multicolorFactor: 0.0, printVolume: { x: 210, y: 220, z: 250 } }
+// powerWatts = average power consumption during printing
+// speedFactor = relative print speed (1.0 = baseline, higher = slower)
+export const PRINTER_PROFILES: Record<string, {
+  hourlyRate: number;
+  speedFactor: number;
+  multicolorFactor: number;
+  printVolume: { x: number; y: number; z: number };
+  powerWatts: number;
+}> = {
+  'Default': {
+    hourlyRate: 2.0,
+    speedFactor: 1.0,
+    multicolorFactor: 1.5,
+    printVolume: { x: 200, y: 200, z: 200 },
+    powerWatts: 200
+  },
+  'BambuLab H2C': {
+    hourlyRate: 6.0,
+    speedFactor: 0.5,       // Very fast CoreXY printer (up to 500mm/s)
+    multicolorFactor: 1.3,  // AMS Lite support for easy multicolor
+    printVolume: { x: 256, y: 256, z: 256 },
+    powerWatts: 450         // High power consumption with heated chamber
+  },
+  'BambuLab P2S': {
+    hourlyRate: 5.0,
+    speedFactor: 0.6,       // Fast CoreXY printer (up to 500mm/s)
+    multicolorFactor: 1.2,  // AMS support for multicolor
+    printVolume: { x: 256, y: 256, z: 256 },
+    powerWatts: 350         // Standard power consumption
+  },
+  'Creality Ender 3 V2': {
+    hourlyRate: 1.5,
+    speedFactor: 2.5,       // Slower bed-slinger (~80-100mm/s typical)
+    multicolorFactor: 0.0,  // No native multicolor support
+    printVolume: { x: 220, y: 220, z: 250 },
+    powerWatts: 270         // 24V system, moderate power
+  }
 };
 
-// Choose which profile should be used by default. Change to 'Default' or 'BambuLab H2C'.
-export const DEFAULT_PRINTER = 'Ender 3 V2';
+// Choose which profile should be used by default
+export const DEFAULT_PRINTER = 'Creality Ender 3 V2';
 
 // colors are now embedded on each material in the MATERIALS map
 

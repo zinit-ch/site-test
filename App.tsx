@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { MaterialType, ModelStats, PrintConfig, PriceBreakdown } from './types';
-import { MATERIALS, NOZZLE_FACTORS, NOZZLES, BASE_SETUP_FEE, LABOR_RATE, ENABLE_MULTICOLOR, PRINTER_PROFILES, DEFAULT_PRINTER } from './constants';
+import { MATERIALS, NOZZLE_FACTORS, NOZZLES, BASE_SETUP_FEE, LABOR_RATE, ENABLE_MULTICOLOR, PRINTER_PROFILES, DEFAULT_PRINTER, ENERGY_COST_PER_KWH } from './constants';
 import { calculateModelStats, formatNumber, roundToNearest005 } from './utils/stlUtils';
 import Viewer3D from './components/Viewer3D';
 import { Upload, Settings, DollarSign, Box, AlertCircle, Palette, Layers, Clock, Send } from 'lucide-react';
@@ -81,7 +81,7 @@ const App: React.FC = () => {
   }, [stats, lang]);
 
   const breakdown = useMemo((): PriceBreakdown => {
-    if (!stats) return { materialCost: 0, laborCost: 0, machineCost: 0, printTime: 0, total: 0 };
+    if (!stats) return { materialCost: 0, laborCost: 0, machineCost: 0, energyCost: 0, printTime: 0, total: 0 };
 
     const material = MATERIALS[config.material];
     const infillFactor = config.infill / 100;
@@ -103,9 +103,12 @@ const App: React.FC = () => {
     const basePerCm3 = 0.04693; // hours per cm³ for infill-independent work (perimeters, travel, etc.)
     const infillPerCm3 = 0.0614035; // hours per cm³ at 100% infill
 
-    // Do not multiply by a separate profile speed factor here so the calibrated
-    // per-cm³ constants directly produce the requested durations.
-    const printTimeHours = volumeCm3 * (basePerCm3 + infillPerCm3 * infillFactor) * layerFactor * nozzleFactor * multicolorFactor;
+    // Apply the printer's speed factor to the base print time
+    const printTimeHours = volumeCm3 * (basePerCm3 + infillPerCm3 * infillFactor) * layerFactor * nozzleFactor * multicolorFactor * profile.speedFactor;
+
+    // Energy cost calculation: power (kW) × time (hours) × cost per kWh
+    const energyKWh = (profile.powerWatts / 1000) * printTimeHours * config.quantity;
+    const energyCostRaw = energyKWh * ENERGY_COST_PER_KWH;
 
     // Labor cost: basic prep + multicolor complexity (adjusted by printer profile if needed)
     const multicolorLaborFlat = config.isMulticolor ? (2.5 * (config.colorsCount || 2) * (profile.multicolorFactor / 1.5)) : 0.0;
@@ -117,11 +120,12 @@ const App: React.FC = () => {
     const materialCost = Math.max(roundToNearest005(materialCostRaw), 0.1);
     const laborCost = roundToNearest005(laborCostRaw);
     const machineCost = roundToNearest005(machineCostRaw);
+    const energyCost = roundToNearest005(energyCostRaw);
 
     const setupFee = roundToNearest005(BASE_SETUP_FEE);
-    const total = roundToNearest005(setupFee + materialCost + laborCost + machineCost);
+    const total = roundToNearest005(setupFee + materialCost + laborCost + machineCost + energyCost);
 
-    return { materialCost, laborCost, machineCost, printTime: printTimeHours, total };
+    return { materialCost, laborCost, machineCost, energyCost, printTime: printTimeHours, total };
   }, [stats, config]);
 
   const handleSendEmail = () => {
@@ -257,6 +261,10 @@ const App: React.FC = () => {
                 <div className="flex justify-between">
                   <span>{t.machineTime}</span>
                   <span className="font-mono">{t.currency} {formatNumber(breakdown.machineCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{t.energyCost}</span>
+                  <span className="font-mono">{t.currency} {formatNumber(breakdown.energyCost)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t.laborPost}</span>

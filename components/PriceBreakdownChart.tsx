@@ -9,6 +9,7 @@ interface PriceBreakdownChartProps {
     material: string;
     labor: string;
     machine: string;
+    energy: string;
   };
 }
 
@@ -17,6 +18,7 @@ const PriceBreakdownChart: React.FC<PriceBreakdownChartProps> = ({ breakdown, la
     { name: labels.material, value: breakdown.materialCost, color: '#4f46e5' },
     { name: labels.labor, value: breakdown.laborCost, color: '#10b981' },
     { name: labels.machine, value: breakdown.machineCost, color: '#f59e0b' },
+    { name: labels.energy, value: breakdown.energyCost, color: '#ef4444' },
   ];
 
   return (
