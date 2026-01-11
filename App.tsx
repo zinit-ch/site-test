@@ -4,7 +4,7 @@ import { MaterialType, ModelStats, PrintConfig, PriceBreakdown } from './types';
 import { MATERIALS, NOZZLE_FACTORS, NOZZLES, BASE_SETUP_FEE, LABOR_RATE, ENABLE_MULTICOLOR, PRINTER_PROFILES, DEFAULT_PRINTER, ENERGY_COST_PER_KWH } from './constants';
 import { calculateModelStats, formatNumber, roundToNearest005 } from './utils/stlUtils';
 import Viewer3D from './components/Viewer3D';
-import { Upload, Settings, DollarSign, Box, AlertCircle, Palette, Layers, Clock, Send } from 'lucide-react';
+import { Upload, Settings, DollarSign, Box, AlertCircle, Palette, Layers, Clock, Send, X } from 'lucide-react';
 import { Language, TRANSLATIONS, MATERIAL_DESCRIPTIONS } from './translations';
 
 const App: React.FC = () => {
@@ -13,6 +13,7 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lang, setLang] = useState<Language>('de');
   const [printerError, setPrinterError] = useState<string | null>(null);
+  const [showTerms, setShowTerms] = useState(false);
 
   const t = TRANSLATIONS[lang];
   const matDesc = MATERIAL_DESCRIPTIONS[lang];
@@ -503,9 +504,32 @@ const App: React.FC = () => {
       <footer className="max-w-7xl mx-auto mt-16 pt-8 border-t border-white/5 text-center text-neutral-600 text-sm">
         <p>&copy; {new Date().getFullYear()} {t.title}. {t.rights}</p>
         <div className="flex justify-center gap-6 mt-4">
-          <a href="#" className="hover:text-neutral-400 transition-colors">{t.terms}</a>
+          <button onClick={() => setShowTerms(true)} className="hover:text-neutral-400 transition-colors">{t.terms}</button>
         </div>
       </footer>
+
+      {/* Terms of Service Modal */}
+      {showTerms && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowTerms(false)} />
+          <div className="relative bg-neutral-900 border border-white/10 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <h2 className="text-xl font-bold text-white">{t.terms}</h2>
+              <button 
+                onClick={() => setShowTerms(false)} 
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-neutral-400" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+              <pre className="whitespace-pre-wrap text-sm text-neutral-300 font-sans leading-relaxed">
+                {t.termsContent}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
