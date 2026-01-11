@@ -42,6 +42,7 @@ export interface PriceBreakdown {
   materialCost: number;
   laborCost: number;
   machineCost: number;
+  energyCost: number;
   printTime: number; // in hours
   total: number;
 }

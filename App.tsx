@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { MaterialType, ModelStats, PrintConfig, PriceBreakdown } from './types';
-import { MATERIALS, NOZZLE_FACTORS, NOZZLES, BASE_SETUP_FEE, LABOR_RATE, ENABLE_MULTICOLOR, PRINTER_PROFILES, DEFAULT_PRINTER } from './constants';
+import { MATERIALS, NOZZLE_FACTORS, NOZZLES, BASE_SETUP_FEE, LABOR_RATE, ENABLE_MULTICOLOR, PRINTER_PROFILES, DEFAULT_PRINTER, ENERGY_COST_PER_KWH } from './constants';
 import { calculateModelStats, formatNumber, roundToNearest005 } from './utils/stlUtils';
 import Viewer3D from './components/Viewer3D';
-import { Upload, Settings, DollarSign, Box, AlertCircle, Palette, Layers, Clock, Send } from 'lucide-react';
+import { Upload, Settings, DollarSign, Box, AlertCircle, Palette, Layers, Clock, Send, X } from 'lucide-react';
 import { Language, TRANSLATIONS, MATERIAL_DESCRIPTIONS } from './translations';
 
 const App: React.FC = () => {
@@ -13,6 +13,7 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lang, setLang] = useState<Language>('de');
   const [printerError, setPrinterError] = useState<string | null>(null);
+  const [showTerms, setShowTerms] = useState(false);
 
   const t = TRANSLATIONS[lang];
   const matDesc = MATERIAL_DESCRIPTIONS[lang];
@@ -81,31 +82,59 @@ const App: React.FC = () => {
   }, [stats, lang]);
 
   const breakdown = useMemo((): PriceBreakdown => {
-    if (!stats) return { materialCost: 0, laborCost: 0, machineCost: 0, printTime: 0, total: 0 };
+    if (!stats) return { materialCost: 0, laborCost: 0, machineCost: 0, energyCost: 0, printTime: 0, total: 0 };
 
     const material = MATERIALS[config.material];
     const infillFactor = config.infill / 100;
     
-    const usedVolumeCm3 = (stats.volume / 1000) * infillFactor;
-    const weightG = usedVolumeCm3 * material.density;
+    // === FILAMENT/MATERIAL CALCULATION ===
+    // Calibrated from real slicer data (Ender 3 V2):
+    // - Shell thickness ~0.9mm equivalent (2 perimeters @ 0.4mm + top/bottom layers)
+    // - Infill efficiency ~92% at 100% infill setting
+    const surfaceAreaCm2 = stats.surfaceArea / 100; // mm² -> cm²
+    const volumeCm3 = stats.volume / 1000; // mm³ -> cm³
+    
+    // Shell volume: surfaceArea (cm²) × 0.09 cm (0.9mm shell thickness)
+    const shellVolumeCm3 = surfaceAreaCm2 * 0.09;
+    // Infill volume: volume × infill% × 0.92 efficiency
+    const infillVolumeCm3 = volumeCm3 * infillFactor * 0.92;
+    // Total filament volume
+    const totalFilamentCm3 = shellVolumeCm3 + infillVolumeCm3;
+    
+    const weightG = totalFilamentCm3 * material.density;
     const materialCostRaw = (weightG / 1000) * material.costPerKg * config.quantity;
-    // Time calculations affected by nozzle, layer height, and printer profile
+    
+    // === TIME CALCULATION ===
+    // Calibrated from real slicer data for Creality Ender 3 V2:
+    // 100mm cube @ 5% infill = 9h51m, @ 100% = 76h13m
+    // 10mm cube @ 5% infill = 10m, @ 100% = 18m
     const profile = PRINTER_PROFILES[DEFAULT_PRINTER] || PRINTER_PROFILES.Default;
 
     const layerFactor = 0.2 / config.layerHeight; 
     const nozzleFactor = NOZZLE_FACTORS[config.nozzleSize];
     const multicolorFactor = config.isMulticolor ? profile.multicolorFactor : 1.0;
 
-    const volumeCm3 = stats.volume / 1000; // convert mm^3 -> cm^3
-    // Calibrated per-cm³ constants so that for 30 cm³ we get:
-    // - 1.5 hours at 5% infill
-    // - 3.25 hours at 100% infill
-    const basePerCm3 = 0.04693; // hours per cm³ for infill-independent work (perimeters, travel, etc.)
-    const infillPerCm3 = 0.0614035; // hours per cm³ at 100% infill
+    // Surface-based time: perimeters, shells, travel (0.0106 h/cm² calibrated from 100mm cube)
+    const surfaceTimePerCm2 = 0.0106;
+    // Infill-based time: 0.06986 h/cm³ at 100% infill (calibrated from 100mm cube)
+    const infillTimePerCm3 = 0.06986;
+    
+    // Base print time calculation
+    let basePrintTime = surfaceAreaCm2 * surfaceTimePerCm2 + volumeCm3 * infillTimePerCm3 * infillFactor;
+    
+    // Small print adjustment: prints under 50 cm³ have proportionally more overhead
+    // (more travel, retractions, slower accelerations relative to print volume)
+    if (volumeCm3 < 50) {
+      const smallPrintMultiplier = 1.0 + ((50 - volumeCm3) / 50) * 1.5; // Up to 2.5x for tiny prints
+      basePrintTime *= smallPrintMultiplier;
+    }
+    
+    // Apply layer height, nozzle, multicolor, and printer speed factors
+    const printTimeHours = basePrintTime * layerFactor * nozzleFactor * multicolorFactor * profile.speedFactor;
 
-    // Do not multiply by a separate profile speed factor here so the calibrated
-    // per-cm³ constants directly produce the requested durations.
-    const printTimeHours = volumeCm3 * (basePerCm3 + infillPerCm3 * infillFactor) * layerFactor * nozzleFactor * multicolorFactor;
+    // Energy cost calculation: power (kW) × time (hours) × cost per kWh
+    const energyKWh = (profile.powerWatts / 1000) * printTimeHours * config.quantity;
+    const energyCostRaw = energyKWh * ENERGY_COST_PER_KWH;
 
     // Labor cost: basic prep + multicolor complexity (adjusted by printer profile if needed)
     const multicolorLaborFlat = config.isMulticolor ? (2.5 * (config.colorsCount || 2) * (profile.multicolorFactor / 1.5)) : 0.0;
@@ -117,11 +146,12 @@ const App: React.FC = () => {
     const materialCost = Math.max(roundToNearest005(materialCostRaw), 0.1);
     const laborCost = roundToNearest005(laborCostRaw);
     const machineCost = roundToNearest005(machineCostRaw);
+    const energyCost = roundToNearest005(energyCostRaw);
 
     const setupFee = roundToNearest005(BASE_SETUP_FEE);
-    const total = roundToNearest005(setupFee + materialCost + laborCost + machineCost);
+    const total = roundToNearest005(setupFee + materialCost + laborCost + machineCost + energyCost);
 
-    return { materialCost, laborCost, machineCost, printTime: printTimeHours, total };
+    return { materialCost, laborCost, machineCost, energyCost, printTime: printTimeHours, total };
   }, [stats, config]);
 
   const handleSendEmail = () => {
@@ -136,7 +166,7 @@ const App: React.FC = () => {
       `${t.emailBodyHeader}\n\n` +
       `- ${t.material}: ${config.material}\n` +
       `- ${t.color}: ${colorName}\n` +
-      `- ${t.multicolor}: ${config.isMulticolor ? 'Yes' : 'No'}\n` +
+      (config.isMulticolor ? `- ${t.multicolor}: Yes\n` : '') +
       `- ${t.nozzleSize}: ${config.nozzleSize}mm\n` +
       `- ${t.infill}: ${config.infill}%\n` +
       `- ${t.layerHeight}: ${config.layerHeight}mm\n` +
@@ -199,7 +229,7 @@ const App: React.FC = () => {
             <label className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 transition-colors px-6 py-3 rounded-xl cursor-pointer font-semibold shadow-lg shadow-indigo-500/20">
             <Upload size={20} />
             <span>{t.upload}</span>
-            <input type="file" accept=".stl,.3mf,.step,.stp" className="hidden" onChange={handleFileUpload} />
+            <input type="file" accept=".stl" className="hidden" onChange={handleFileUpload} />
           </label>
         </div>
       </header>
@@ -257,6 +287,10 @@ const App: React.FC = () => {
                 <div className="flex justify-between">
                   <span>{t.machineTime}</span>
                   <span className="font-mono">{t.currency} {formatNumber(breakdown.machineCost)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>{t.energyCost}</span>
+                  <span className="font-mono">{t.currency} {formatNumber(breakdown.energyCost)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>{t.laborPost}</span>
@@ -470,9 +504,32 @@ const App: React.FC = () => {
       <footer className="max-w-7xl mx-auto mt-16 pt-8 border-t border-white/5 text-center text-neutral-600 text-sm">
         <p>&copy; {new Date().getFullYear()} {t.title}. {t.rights}</p>
         <div className="flex justify-center gap-6 mt-4">
-          <a href="#" className="hover:text-neutral-400 transition-colors">{t.terms}</a>
+          <button onClick={() => setShowTerms(true)} className="hover:text-neutral-400 transition-colors">{t.terms}</button>
         </div>
       </footer>
+
+      {/* Terms of Service Modal */}
+      {showTerms && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowTerms(false)} />
+          <div className="relative bg-neutral-900 border border-white/10 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <h2 className="text-xl font-bold text-white">{t.terms}</h2>
+              <button 
+                onClick={() => setShowTerms(false)} 
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-neutral-400" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+              <pre className="whitespace-pre-wrap text-sm text-neutral-300 font-sans leading-relaxed">
+                {t.termsContent}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
