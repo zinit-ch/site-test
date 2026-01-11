@@ -103,7 +103,7 @@ export const PRINTER_PROFILES: Record<string, {
     hourlyRate: 1.5,
     speedFactor: 1.0,       // Baseline speed (bed-slinger ~80-100mm/s typical)
     multicolorFactor: 0.0,  // No native multicolor support
-    printVolume: { x: 220, y: 220, z: 250 },
+    printVolume: { x: 210, y: 220, z: 250 },
     powerWatts: 270         // 24V system, moderate power
   }
 };
