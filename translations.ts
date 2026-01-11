@@ -40,7 +40,7 @@ All prices shown are estimates. Final pricing may vary based on actual print tim
 Customers must provide valid, printable STL files. We reserve the right to reject files that are not suitable for printing.
 
 4. Quality & Tolerances
-FDM 3D printing has inherent limitations. Minor imperfections, layer lines, and dimensional tolerances of ±0.5mm are normal and not considered defects.
+FDM 3D printing has inherent limitations. Minor imperfections, layer lines, and dimensional tolerances of ±0.2mm are normal and not considered defects.
 
 5. Liability
 We are not liable for any damages arising from the use of printed parts. Parts are provided "as is" without warranty for specific applications.
@@ -101,7 +101,7 @@ Alle angezeigten Preise sind Schätzungen. Der Endpreis kann je nach tatsächlic
 Kunden müssen gültige, druckbare STL-Dateien bereitstellen. Wir behalten uns das Recht vor, Dateien abzulehnen, die nicht für den Druck geeignet sind.
 
 4. Qualität & Toleranzen
-FDM-3D-Druck hat inhärente Einschränkungen. Kleinere Unvollkommenheiten, Schichtlinien und Masstoleranzen von ±0,5mm sind normal und gelten nicht als Mängel.
+FDM-3D-Druck hat inhärente Einschränkungen. Kleinere Unvollkommenheiten, Schichtlinien und Masstoleranzen von ±0.2mm sind normal und gelten nicht als Mängel.
 
 5. Haftung
 Wir haften nicht für Schäden, die durch die Verwendung der gedruckten Teile entstehen. Teile werden ohne Gewährleistung für spezifische Anwendungen "wie besehen" geliefert.
@@ -162,7 +162,7 @@ Tous les prix affichés sont des estimations. Le prix final peut varier en fonct
 Les clients doivent fournir des fichiers STL valides et imprimables. Nous nous réservons le droit de rejeter les fichiers qui ne conviennent pas à l'impression.
 
 4. Qualité et tolérances
-L'impression 3D FDM a des limitations inhérentes. Les petites imperfections, les lignes de couche et les tolérances dimensionnelles de ±0,5mm sont normales et ne sont pas considérées comme des défauts.
+L'impression 3D FDM a des limitations inhérentes. Les petites imperfections, les lignes de couche et les tolérances dimensionnelles de ±0.2mm sont normales et ne sont pas considérées comme des défauts.
 
 5. Responsabilité
 Nous ne sommes pas responsables des dommages résultant de l'utilisation des pièces imprimées. Les pièces sont fournies "telles quelles" sans garantie pour des applications spécifiques.
@@ -223,7 +223,7 @@ Tutti i prezzi mostrati sono stime. Il prezzo finale può variare in base al tem
 I clienti devono fornire file STL validi e stampabili. Ci riserviamo il diritto di rifiutare file non adatti alla stampa.
 
 4. Qualità e tolleranze
-La stampa 3D FDM ha limitazioni intrinseche. Piccole imperfezioni, linee di strato e tolleranze dimensionali di ±0,2 mm sono normali e non sono considerate difetti.
+La stampa 3D FDM ha limitazioni intrinseche. Piccole imperfezioni, linee di strato e tolleranze dimensionali di ±0.2mm sono normali e non sono considerate difetti.
 
 5. Responsabilità
 Non siamo responsabili per eventuali danni derivanti dall'uso delle parti stampate. Le parti sono fornite "così come sono" senza garanzia per applicazioni specifiche.
