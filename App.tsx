@@ -165,7 +165,7 @@ const App: React.FC = () => {
       `${t.emailBodyHeader}\n\n` +
       `- ${t.material}: ${config.material}\n` +
       `- ${t.color}: ${colorName}\n` +
-      `- ${t.multicolor}: ${config.isMulticolor ? 'Yes' : 'No'}\n` +
+      (ENABLE_MULTICOLOR ? `- ${t.multicolor}: ${config.isMulticolor ? 'Yes' : 'No'}\n` : '') +
       `- ${t.nozzleSize}: ${config.nozzleSize}mm\n` +
       `- ${t.infill}: ${config.infill}%\n` +
       `- ${t.layerHeight}: ${config.layerHeight}mm\n` +
