@@ -86,25 +86,50 @@ const App: React.FC = () => {
     const material = MATERIALS[config.material];
     const infillFactor = config.infill / 100;
     
-    const usedVolumeCm3 = (stats.volume / 1000) * infillFactor;
-    const weightG = usedVolumeCm3 * material.density;
+    // === FILAMENT/MATERIAL CALCULATION ===
+    // Calibrated from real slicer data (Ender 3 V2):
+    // - Shell thickness ~0.9mm equivalent (2 perimeters @ 0.4mm + top/bottom layers)
+    // - Infill efficiency ~92% at 100% infill setting
+    const surfaceAreaCm2 = stats.surfaceArea / 100; // mm² -> cm²
+    const volumeCm3 = stats.volume / 1000; // mm³ -> cm³
+    
+    // Shell volume: surfaceArea (cm²) × 0.09 cm (0.9mm shell thickness)
+    const shellVolumeCm3 = surfaceAreaCm2 * 0.09;
+    // Infill volume: volume × infill% × 0.92 efficiency
+    const infillVolumeCm3 = volumeCm3 * infillFactor * 0.92;
+    // Total filament volume
+    const totalFilamentCm3 = shellVolumeCm3 + infillVolumeCm3;
+    
+    const weightG = totalFilamentCm3 * material.density;
     const materialCostRaw = (weightG / 1000) * material.costPerKg * config.quantity;
-    // Time calculations affected by nozzle, layer height, and printer profile
+    
+    // === TIME CALCULATION ===
+    // Calibrated from real slicer data for Creality Ender 3 V2:
+    // 100mm cube @ 5% infill = 9h51m, @ 100% = 76h13m
+    // 10mm cube @ 5% infill = 10m, @ 100% = 18m
     const profile = PRINTER_PROFILES[DEFAULT_PRINTER] || PRINTER_PROFILES.Default;
 
     const layerFactor = 0.2 / config.layerHeight; 
     const nozzleFactor = NOZZLE_FACTORS[config.nozzleSize];
     const multicolorFactor = config.isMulticolor ? profile.multicolorFactor : 1.0;
 
-    const volumeCm3 = stats.volume / 1000; // convert mm^3 -> cm^3
-    // Calibrated per-cm³ constants so that for 30 cm³ we get:
-    // - 1.5 hours at 5% infill
-    // - 3.25 hours at 100% infill
-    const basePerCm3 = 0.04693; // hours per cm³ for infill-independent work (perimeters, travel, etc.)
-    const infillPerCm3 = 0.0614035; // hours per cm³ at 100% infill
-
-    // Apply the printer's speed factor to the base print time
-    const printTimeHours = volumeCm3 * (basePerCm3 + infillPerCm3 * infillFactor) * layerFactor * nozzleFactor * multicolorFactor * profile.speedFactor;
+    // Surface-based time: perimeters, shells, travel (0.0106 h/cm² calibrated from 100mm cube)
+    const surfaceTimePerCm2 = 0.0106;
+    // Infill-based time: 0.06986 h/cm³ at 100% infill (calibrated from 100mm cube)
+    const infillTimePerCm3 = 0.06986;
+    
+    // Base print time calculation
+    let basePrintTime = surfaceAreaCm2 * surfaceTimePerCm2 + volumeCm3 * infillTimePerCm3 * infillFactor;
+    
+    // Small print adjustment: prints under 50 cm³ have proportionally more overhead
+    // (more travel, retractions, slower accelerations relative to print volume)
+    if (volumeCm3 < 50) {
+      const smallPrintMultiplier = 1.0 + ((50 - volumeCm3) / 50) * 1.5; // Up to 2.5x for tiny prints
+      basePrintTime *= smallPrintMultiplier;
+    }
+    
+    // Apply layer height, nozzle, multicolor, and printer speed factors
+    const printTimeHours = basePrintTime * layerFactor * nozzleFactor * multicolorFactor * profile.speedFactor;
 
     // Energy cost calculation: power (kW) × time (hours) × cost per kWh
     const energyKWh = (profile.powerWatts / 1000) * printTimeHours * config.quantity;

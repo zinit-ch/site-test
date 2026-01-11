@@ -70,7 +70,7 @@ export const ENERGY_COST_PER_KWH = 0.4;
 
 // Printer profiles: adjust these to optimize pricing/time calculations per printer
 // powerWatts = average power consumption during printing
-// speedFactor = relative print speed (1.0 = baseline, higher = slower)
+// speedFactor = relative print speed (1.0 = Ender 3 V2 baseline, lower = faster)
 export const PRINTER_PROFILES: Record<string, {
   hourlyRate: number;
   speedFactor: number;
@@ -87,21 +87,21 @@ export const PRINTER_PROFILES: Record<string, {
   },
   'BambuLab H2C': {
     hourlyRate: 6.0,
-    speedFactor: 0.5,       // Very fast CoreXY printer (up to 500mm/s)
+    speedFactor: 0.20,      // ~5x faster than Ender 3 (CoreXY up to 500mm/s + heated chamber)
     multicolorFactor: 1.3,  // AMS Lite support for easy multicolor
     printVolume: { x: 256, y: 256, z: 256 },
     powerWatts: 450         // High power consumption with heated chamber
   },
   'BambuLab P2S': {
     hourlyRate: 5.0,
-    speedFactor: 0.6,       // Fast CoreXY printer (up to 500mm/s)
+    speedFactor: 0.25,      // ~4x faster than Ender 3 (CoreXY up to 500mm/s)
     multicolorFactor: 1.2,  // AMS support for multicolor
     printVolume: { x: 256, y: 256, z: 256 },
     powerWatts: 350         // Standard power consumption
   },
   'Creality Ender 3 V2': {
     hourlyRate: 1.5,
-    speedFactor: 2.5,       // Slower bed-slinger (~80-100mm/s typical)
+    speedFactor: 1.0,       // Baseline speed (bed-slinger ~80-100mm/s typical)
     multicolorFactor: 0.0,  // No native multicolor support
     printVolume: { x: 220, y: 220, z: 250 },
     powerWatts: 270         // 24V system, moderate power
