@@ -223,7 +223,7 @@ Tutti i prezzi mostrati sono stime. Il prezzo finale può variare in base al tem
 I clienti devono fornire file STL validi e stampabili. Ci riserviamo il diritto di rifiutare file non adatti alla stampa.
 
 4. Qualità e tolleranze
-La stampa 3D FDM ha limitazioni intrinseche. Piccole imperfezioni, linee di strato e tolleranze dimensionali di ±0,5mm sono normali e non sono considerate difetti.
+La stampa 3D FDM ha limitazioni intrinseche. Piccole imperfezioni, linee di strato e tolleranze dimensionali di ±0,2 mm sono normali e non sono considerate difetti.
 
 5. Responsabilità
 Non siamo responsabili per eventuali danni derivanti dall'uso delle parti stampate. Le parti sono fornite "così come sono" senza garanzia per applicazioni specifiche.
