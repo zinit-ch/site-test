@@ -2,8 +2,8 @@
 import React, { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stage, Center, Grid, Environment } from '@react-three/drei';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import * as THREE from 'three';
-// Loaders are dynamically imported to keep the initial bundle small
 
 interface Viewer3DProps {
   file: File | null;
@@ -21,26 +21,15 @@ const Model = ({ file }: { file: File }) => {
     const url = URL.createObjectURL(file);
     let cancelled = false;
 
-    const loadSTL = () => new Promise<{ type: 'geometry'; geometry: THREE.BufferGeometry }>((resolve, reject) => {
-      import('three/examples/jsm/loaders/STLLoader').then((mod) => {
-        const loader = new mod.STLLoader();
-        loader.load(url, (geo: THREE.BufferGeometry) => {
-          geo.computeVertexNormals();
-          if (!cancelled) resolve({ type: 'geometry', geometry: geo });
-        }, undefined, reject);
-      }).catch(reject);
+    const loadSTL = () => new Promise<THREE.BufferGeometry>((resolve, reject) => {
+      const loader = new STLLoader();
+      loader.load(url, (geo: THREE.BufferGeometry) => {
+        geo.computeVertexNormals();
+        if (!cancelled) resolve(geo);
+      }, undefined, reject);
     });
 
-    const load3MF = () => new Promise<{ type: 'object'; object: THREE.Object3D }>((resolve, reject) => {
-      import('three/examples/jsm/loaders/3MFLoader').then((mod) => {
-        const loader = new mod.ThreeMFLoader();
-        loader.load(url, (object: THREE.Object3D) => {
-          if (!cancelled) resolve({ type: 'object', object });
-        }, undefined, reject);
-      }).catch(reject);
-    });
-
-    const promise = ext.endsWith('.stl') ? loadSTL() : (ext.endsWith('.3mf') ? load3MF() : Promise.reject(new Error('Unsupported preview')));
+    const promise = ext.endsWith('.stl') ? loadSTL() : Promise.reject(new Error('Unsupported preview'));
 
     return {
       promise,
@@ -49,29 +38,29 @@ const Model = ({ file }: { file: File }) => {
     };
   }, [file]);
 
-  const [geoObj, setGeoObj] = React.useState<any>(null);
+  const [geometry, setGeometry] = React.useState<THREE.BufferGeometry | null>(null);
 
   React.useEffect(() => {
     let mounted = true;
-    result.promise.then((res: any) => {
+    result.promise.then((geo) => {
       if (!mounted) return;
-      setGeoObj(res);
+      setGeometry(geo);
     }).catch(() => {
-      setGeoObj(null);
+      setGeometry(null);
     });
 
     return () => {
       mounted = false;
       try { URL.revokeObjectURL(result.url); } catch (e) {}
       result.cancel();
-      if (geoObj && geoObj.type === 'geometry') {
-        try { geoObj.geometry.dispose?.(); } catch (e) {}
+      if (geometry) {
+        try { geometry.dispose?.(); } catch (e) {}
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
-  if (!geoObj) return (
+  if (!geometry) return (
     <Center>
       <mesh>
         <meshStandardMaterial color="#374151" />
@@ -79,22 +68,11 @@ const Model = ({ file }: { file: File }) => {
     </Center>
   );
 
-  if (geoObj.type === 'geometry') {
-    const MeshComp = 'mesh' as any;
-    const MeshMat = 'meshStandardMaterial' as any;
-    return (
-      <Center>
-        <MeshComp geometry={geoObj.geometry} castShadow receiveShadow>
-          <MeshMat color="#4f46e5" roughness={0.3} metalness={0.2} />
-        </MeshComp>
-      </Center>
-    );
-  }
-
-  // object (3MF)
   return (
     <Center>
-      <primitive object={geoObj.object} />
+      <mesh geometry={geometry} castShadow receiveShadow>
+        <meshStandardMaterial color="#4f46e5" roughness={0.3} metalness={0.2} />
+      </mesh>
     </Center>
   );
 };
@@ -115,7 +93,7 @@ const Viewer3D: React.FC<Viewer3DProps> = ({ file, labels }) => {
       ) : (
         <Canvas shadows camera={{ position: [100, 100, 100], fov: 45 }}>
           <Suspense fallback={null}>
-            <Stage environment="city" intensity={0.5} contactShadow={{ opacity: 0.4, blur: 2 }}>
+            <Stage environment="city" intensity={0.5} shadows={{ type: 'contact', opacity: 0.4, blur: 2 }}>
               <Model file={file} />
             </Stage>
             <OrbitControls makeDefault />
