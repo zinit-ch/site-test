@@ -228,7 +228,7 @@ const App: React.FC = () => {
             <label className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 transition-colors px-6 py-3 rounded-xl cursor-pointer font-semibold shadow-lg shadow-indigo-500/20">
             <Upload size={20} />
             <span>{t.upload}</span>
-            <input type="file" accept=".stl,.3mf,.step,.stp" className="hidden" onChange={handleFileUpload} />
+            <input type="file" accept=".stl" className="hidden" onChange={handleFileUpload} />
           </label>
         </div>
       </header>

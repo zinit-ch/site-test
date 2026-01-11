@@ -76,31 +76,8 @@ export const calculateModelStats = async (file: File): Promise<ModelStats> => {
     };
   }
 
-  // For other filetypes (.3mf, .step/.stp) provide an improved heuristic estimate based on file size
-  const sizeBytes = file.size || 0;
-  let multiplier = 0.5;
-  if (name.endsWith('.3mf')) multiplier = 0.8;
-  if (name.endsWith('.step') || name.endsWith('.stp')) multiplier = 2.0;
-
-  // Estimate volume (mm^3) from file size with clamping
-  let estVolume = Math.round(sizeBytes * multiplier);
-  estVolume = Math.max(2000, Math.min(1000000, estVolume));
-
-  // Estimate bounding box as roughly a cube with side = cbrt(volume)
-  const side = Math.max(10, Math.round(Math.cbrt(estVolume)));
-  const estBBox = { x: side, y: side, z: side };
-
-  // Surface area estimate (approximate): surface of cube scaled down for complexity
-  const estSurface = Math.round(6 * Math.pow(side, 2) * 0.6);
-
-  const estTriangles = Math.min(500000, Math.max(100, Math.round(sizeBytes / 10)));
-
-  return {
-    volume: estVolume,
-    surfaceArea: estSurface,
-    boundingBox: estBBox,
-    triangles: estTriangles
-  };
+  // Unsupported file type
+  throw new Error('Unsupported file format. Please upload an STL file.');
 };
 
 export const formatNumber = (num: number) => num.toLocaleString(undefined, { maximumFractionDigits: 2 });
